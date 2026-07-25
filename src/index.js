@@ -41,14 +41,17 @@ export {
   settle,
   IGNORE_ATTRIBUTE,
 } from './canvas.js';
+export { escapeHtml } from './html.js';
 export { inlineImages, urlToDataURL, blobToDataURL, waitForImages, isCrossOrigin } from './images.js';
 export { planPages, planFit, estimatePageCount } from './paginate.js';
 export {
   PAGE_SIZES,
   ORIENTATIONS,
   SCALE_PRESETS,
+  CJK_FONT_STACKS,
   CSS_DPI,
   MM_PER_INCH,
+  fontStackFor,
   resolvePageSize,
   resolveScale,
   mmToPx,
@@ -69,6 +72,10 @@ export { addWatermark, clearWatermarks } from './watermark.js';
  * @property {number|'screen'|'print'|'high'} [scale='print'] Raster quality.
  *   `'print'` (2x) is the default; memory cost grows with the square.
  * @property {number} [dpi=96] DPI used when converting mm to CSS pixels.
+ *   `htmlToPDF` only — it sizes the offscreen container your markup lays out
+ *   in. `elementToPDF`/`elementsToPDF` receive an element that already has a
+ *   layout and scale the capture by millimetres, so `dpi` has no effect there.
+ *   Raster resolution is controlled by `scale` in all cases.
  * @property {'slice'|'fit'} [mode='slice'] `'slice'` flows tall content across
  *   pages; `'fit'` shrinks each element onto a single page.
  * @property {string|null} [background='#ffffff'] Canvas background colour.
@@ -78,6 +85,10 @@ export { addWatermark, clearWatermarks } from './watermark.js';
  * @property {boolean|object} [inlineImages=true] Convert cross-origin images to
  *   data URLs before capture. Pass an options object to configure it, or
  *   `false` to skip.
+ * @property {number} [settleMs=50] How long to wait after the last DOM change
+ *   before measuring, on top of two animation frames. Raise it (300-500) when
+ *   capturing an element that is already on the page and may still be
+ *   laying out — webfont swaps, lazy images, freshly expanded sections.
  * @property {import('./watermark.js').WatermarkOptions|null} [watermark=null]
  * @property {(progress: {phase: string, current: number, total: number}) => void} [onProgress]
  * @property {Function} [jsPDF] Explicit jsPDF constructor.
@@ -111,6 +122,7 @@ const DEFAULTS = {
   imageFormat: 'JPEG',
   imageQuality: 0.92,
   inlineImages: true,
+  settleMs: 50,
   watermark: null,
   onProgress: null,
 };
@@ -149,7 +161,10 @@ export async function elementsToPDF(elements, options = {}) {
   }
 
   const opts = { ...DEFAULTS, ...options };
-  const page = resolvePageSize(opts.pageSize, opts.orientation, opts.dpi);
+  // Millimetres only from here on: the element already has a layout, and the
+  // canvas is fitted to the page in mm. `page.widthPx`/`heightPx` are
+  // deliberately unused, which is why `dpi` is a no-op on this path.
+  const page = resolvePageSize(opts.pageSize, opts.orientation);
   const scale = resolveScale(opts.scale);
   const report = makeReporter(opts.onProgress, list.length);
 
@@ -188,7 +203,7 @@ export async function elementsToPDF(elements, options = {}) {
         cleanups.push(addWatermark(element, opts.watermark));
       }
 
-      await settle();
+      await settle(opts.settleMs);
 
       canvas = await renderToCanvas(element, {
         html2canvas,
@@ -223,13 +238,24 @@ export async function elementsToPDF(elements, options = {}) {
  * width in CSS pixels, so a plain `<div>` with no width naturally fills the
  * page. Style it however you like — the browser does the layout.
  *
+ * **This takes raw HTML and mounts it in your live document.** Anything you
+ * interpolate is parsed as markup: a stray `<` breaks the layout, and a
+ * `<img onerror=...>` in a value that came from a user runs script on your
+ * page. Wrap every interpolated value in {@link escapeHtml}.
+ *
  * @param {string|string[]} html
  * @param {ExportOptions & { fontFamily?: string }} [options]
+ *   `fontFamily` sets the CSS font stack on the offscreen container — this path
+ *   only, since it is the only one that builds its own layout root. Use
+ *   `CJK_FONT_STACKS` / `fontStackFor()` rather than inventing one.
  * @returns {Promise<ExportResult>}
  *
  * @example
- * await htmlToPDF('<h1 style="font-size:48px">你好，世界</h1>', {
+ * import { htmlToPDF, escapeHtml, CJK_FONT_STACKS } from 'cjk-pdf';
+ *
+ * await htmlToPDF(`<h1 style="font-size:48px">${escapeHtml(title)}</h1>`, {
  *   filename: 'hello.pdf',
+ *   fontFamily: CJK_FONT_STACKS.zhTW,
  * });
  */
 export async function htmlToPDF(html, options = {}) {
@@ -260,7 +286,7 @@ export async function htmlToPDF(html, options = {}) {
       container.appendChild(holder);
       pages.push(holder);
     }
-    await settle();
+    await settle(opts.settleMs);
     return await elementsToPDF(pages, opts);
   } finally {
     destroyContainer(container);

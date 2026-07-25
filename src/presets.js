@@ -44,6 +44,103 @@ export const SCALE_PRESETS = Object.freeze({
   high: 3, // 288 DPI - large files, use for small pages only
 });
 
+/**
+ * CSS font stacks that actually resolve to a CJK face on the machines your
+ * users have.
+ *
+ * The browser does the shaping, so the export is only as good as the fonts the
+ * rendering machine owns. A stack of `sans-serif` alone gets you whatever the
+ * system picked as its default — frequently a Latin face with a fallback that
+ * renders Traditional Chinese with Simplified glyph shapes, or nothing at all.
+ *
+ * Each stack is ordered the same way, and the order is the point:
+ *
+ *   1. **Noto Sans TC/SC/JP/KR** — the webfont. If you loaded one, it wins, and
+ *      the output is identical on every machine. If you did not, the name
+ *      simply does not match and the browser moves on.
+ *   2. **The modern Apple face** — PingFang (macOS 10.11+/iOS 9+), Hiragino
+ *      Sans, Apple SD Gothic Neo. Present on every current Mac and iPhone.
+ *   3. **The modern Microsoft face** — Microsoft JhengHei / YaHei, Yu Gothic,
+ *      Malgun Gothic. Present on every current Windows install.
+ *   4. **A legacy fallback** — Heiti (pre-10.11 macOS and old iOS), Hiragino
+ *      Kaku Gothic ProN, Meiryo, Nanum Gothic. Cheap insurance.
+ *   5. `sans-serif`.
+ *
+ * Do not concatenate two of these into one stack. Han unification means one
+ * codepoint is drawn differently by region — 骨, 直 and 令 are the textbook
+ * cases — and a Simplified or Japanese font will happily render a Traditional
+ * document in its own shapes. Whichever font comes first wins for the entire
+ * document, so a merged stack silently gives one of your audiences the wrong
+ * glyph forms. Pick the stack for the language of the page.
+ *
+ * @type {Readonly<Record<'zhTW'|'zhCN'|'ja'|'ko', string>>}
+ */
+export const CJK_FONT_STACKS = Object.freeze({
+  /** Traditional Chinese — Taiwan, Hong Kong, Macau. */
+  zhTW: "'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Heiti TC', sans-serif",
+  /** Simplified Chinese — mainland China, Singapore. */
+  zhCN: "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Heiti SC', sans-serif",
+  /** Japanese. */
+  ja: "'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif",
+  /** Korean. */
+  ko: "'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Nanum Gothic', sans-serif",
+});
+
+/** BCP 47-ish tags and loose aliases mapped onto a `CJK_FONT_STACKS` key. */
+const FONT_STACK_ALIASES = Object.freeze({
+  zhtw: 'zhTW',
+  zhhant: 'zhTW',
+  zhhanttw: 'zhTW',
+  zhhk: 'zhTW',
+  zhmo: 'zhTW',
+  zhhanthk: 'zhTW',
+  tw: 'zhTW',
+  hant: 'zhTW',
+  zhcn: 'zhCN',
+  zhhans: 'zhCN',
+  zhhanscn: 'zhCN',
+  zhsg: 'zhCN',
+  zh: 'zhCN',
+  cn: 'zhCN',
+  hans: 'zhCN',
+  ja: 'ja',
+  jajp: 'ja',
+  jp: 'ja',
+  jpn: 'ja',
+  ko: 'ko',
+  kokr: 'ko',
+  kr: 'ko',
+  kor: 'ko',
+});
+
+/**
+ * Look up a font stack by language tag.
+ *
+ * Bare `zh` resolves to Simplified Chinese, matching the CLDR default for the
+ * undifferentiated tag. If you mean Traditional, say `zh-TW` or `zh-Hant` —
+ * this is exactly the ambiguity that ships wrong glyph shapes, so it is worth
+ * being explicit in your own code.
+ *
+ * @param {string} lang A tag like `'zh-TW'`, `'zh-Hant'`, `'ja'`, `'ko-KR'`,
+ *   or a `CJK_FONT_STACKS` key.
+ * @returns {string} A CSS `font-family` value.
+ * @throws {TypeError} When the tag is not a CJK language this module knows.
+ *
+ * @example
+ * await htmlToPDF(markup, { fontFamily: fontStackFor(document.documentElement.lang) });
+ */
+export function fontStackFor(lang) {
+  const key = FONT_STACK_ALIASES[normalizeName(lang)];
+  if (!key) {
+    throw new TypeError(
+      `No CJK font stack for "${lang}". Expected a Chinese, Japanese or Korean ` +
+        `language tag (e.g. zh-TW, zh-CN, ja, ko), or one of: ` +
+        `${Object.keys(CJK_FONT_STACKS).join(', ')}.`
+    );
+  }
+  return CJK_FONT_STACKS[key];
+}
+
 /** Convert millimetres to CSS pixels at the given DPI. */
 export function mmToPx(mm, dpi = CSS_DPI) {
   assertPositive(mm, 'mm');

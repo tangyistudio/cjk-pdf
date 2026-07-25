@@ -7,8 +7,10 @@
  *    `display: none`. A `display: none` subtree has no layout boxes, so
  *    html2canvas measures everything as 0x0 and you get a blank page. Moving
  *    the element to `left: -100000px` keeps it fully laid out while remaining
- *    invisible. `visibility: hidden` and `opacity: 0` also lay out, but
- *    html2canvas will faithfully reproduce the invisibility.
+ *    invisible. `visibility: hidden` and `opacity: 0` also lay out, but they
+ *    are not a way to hide things from the export: `neutralizeClone` below
+ *    resets both when they are set inline, so the content is drawn. Use the
+ *    `data-cjk-pdf-ignore` attribute for that instead.
  *
  * 2. The container is sized in CSS pixels at 96 DPI (A4 = 794 x 1123), so one
  *    CSS pixel maps to one PDF millimetre through a single constant factor.

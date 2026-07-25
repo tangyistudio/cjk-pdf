@@ -5,13 +5,13 @@
   "type": "module",
   "license": "MIT",
   "author": "Tangyi Studio",
-  "homepage": "https://github.com/TangyiStudio/cjk-pdf#readme",
+  "homepage": "https://github.com/tangyistudio/cjk-pdf#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TangyiStudio/cjk-pdf.git"
+    "url": "git+https://github.com/tangyistudio/cjk-pdf.git"
   },
   "bugs": {
-    "url": "https://github.com/TangyiStudio/cjk-pdf/issues"
+    "url": "https://github.com/tangyistudio/cjk-pdf/issues"
   },
   "keywords": [
     "pdf",
@@ -37,6 +37,7 @@
       "default": "./src/index.js"
     },
     "./canvas": "./src/canvas.js",
+    "./html": "./src/html.js",
     "./images": "./src/images.js",
     "./paginate": "./src/paginate.js",
     "./presets": "./src/presets.js",
@@ -54,7 +55,6 @@
   },
   "scripts": {
     "test": "node --test",
-    "test:glob": "node --test \"test/**/*.test.js\"",
     "example": "npx --yes serve ."
   },
   "peerDependencies": {
