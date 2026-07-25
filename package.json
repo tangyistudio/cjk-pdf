@@ -1,0 +1,75 @@
+{
+  "name": "cjk-pdf",
+  "version": "0.1.0",
+  "description": "Export HTML containing Chinese, Japanese or Korean text to PDF in the browser, without embedding a multi-megabyte CJK font. Renders through html2canvas and jsPDF addImage.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Tangyi Studio",
+  "homepage": "https://github.com/TangyiStudio/cjk-pdf#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TangyiStudio/cjk-pdf.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TangyiStudio/cjk-pdf/issues"
+  },
+  "keywords": [
+    "pdf",
+    "jspdf",
+    "html2canvas",
+    "cjk",
+    "chinese",
+    "japanese",
+    "korean",
+    "unicode",
+    "garbled",
+    "tofu",
+    "html-to-pdf",
+    "export",
+    "watermark",
+    "browser"
+  ],
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./canvas": "./src/canvas.js",
+    "./images": "./src/images.js",
+    "./paginate": "./src/paginate.js",
+    "./presets": "./src/presets.js",
+    "./watermark": "./src/watermark.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test",
+    "test:glob": "node --test \"test/**/*.test.js\"",
+    "example": "npx --yes serve ."
+  },
+  "peerDependencies": {
+    "html2canvas": "^1.4.0",
+    "jspdf": "^2.5.0 || ^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "html2canvas": {
+      "optional": false
+    },
+    "jspdf": {
+      "optional": false
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

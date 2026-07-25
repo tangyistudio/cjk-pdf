@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>cjk-pdf — basic example</title>
+
+    <!--
+      jsPDF and html2canvas are peer dependencies. Here they come from a CDN as
+      classic scripts, which expose window.jspdf.jsPDF and window.html2canvas.
+      cjk-pdf finds them automatically.
+
+      Serve this file over HTTP, not file:// — ES module imports are blocked on
+      the file: protocol. From the package root:  npx serve .
+      then open  http://localhost:3000/examples/basic.html
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1f2328;
+        --muted: #57606a;
+        --line: #d8dee4;
+        --accent: #1f6feb;
+      }
+
+      body {
+        margin: 0;
+        padding: 32px 20px 80px;
+        background: #f6f8fa;
+        color: var(--ink);
+        font-family: -apple-system, "Segoe UI", "Noto Sans TC", "Noto Sans SC",
+          "Noto Sans JP", "Hiragino Sans", "Microsoft JhengHei", "Malgun Gothic",
+          sans-serif;
+        line-height: 1.7;
+      }
+
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: 24px;
+        margin: 0 0 4px;
+      }
+
+      .lede {
+        color: var(--muted);
+        margin: 0 0 24px;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        font: inherit;
+        font-size: 14px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      button[disabled] {
+        opacity: 0.55;
+        cursor: progress;
+      }
+
+      label {
+        font-size: 14px;
+        color: var(--muted);
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      #status {
+        font-size: 14px;
+        color: var(--muted);
+        min-height: 1.7em;
+      }
+
+      /* The capture target. Sized to the A4 printable width in CSS pixels
+         (210mm at 96 DPI = 794px) so what you see is what the PDF gets. */
+      #report {
+        width: 794px;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin: 0 auto;
+        padding: 56px 60px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      #report h2 {
+        font-size: 32px;
+        margin: 0 0 8px;
+        letter-spacing: 0.04em;
+      }
+
+      #report .sub {
+        color: var(--muted);
+        margin: 0 0 32px;
+      }
+
+      #report p {
+        font-size: 17px;
+        margin: 0 0 18px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 24px 0;
+        font-size: 15px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 8px;
+        text-align: left;
+      }
+
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .glyphs {
+        font-size: 22px;
+        letter-spacing: 0.12em;
+        padding: 16px;
+        background: #f6f8fa;
+        border-radius: 6px;
+      }
+
+      footer.note {
+        margin-top: 28px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <h1>cjk-pdf — basic example</h1>
+      <p class="lede">
+        Everything below the toolbar is captured and written into a PDF. No font
+        is embedded; the browser renders the glyphs.
+      </p>
+
+      <div class="toolbar" data-cjk-pdf-ignore>
+        <button id="export" class="primary" type="button">Export PDF</button>
+        <label>
+          <input id="watermark" type="checkbox" />
+          Add watermark
+        </label>
+        <label>
+          <input id="landscape" type="checkbox" />
+          Landscape
+        </label>
+      </div>
+      <p id="status" data-cjk-pdf-ignore>Ready.</p>
+
+      <section id="report">
+        <h2>季度營運報告</h2>
+        <p class="sub">2026 年第二季 · 全區彙總</p>
+
+        <p>
+          這份文件用來示範中日韓文字的 PDF 匯出。若改用 jsPDF 內建的
+          <code>doc.text()</code> 直接輸出，畫面上會出現一排排的方框，因為內建字型
+          只支援 Latin-1 編碼。這裡改由瀏覽器先把 HTML 畫成點陣圖，再放進 PDF，
+          所以字型、標點、直排、注音、表情符號都會完整保留。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>項目</th>
+              <th>本季</th>
+              <th>上季</th>
+              <th>變化</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>營業收入</td>
+              <td>1,284,000</td>
+              <td>1,105,200</td>
+              <td>+16.2%</td>
+            </tr>
+            <tr>
+              <td>毛利率</td>
+              <td>41.8%</td>
+              <td>39.0%</td>
+              <td>+2.8pt</td>
+            </tr>
+            <tr>
+              <td>活躍用戶</td>
+              <td>92,410</td>
+              <td>81,733</td>
+              <td>+13.1%</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="glyphs">
+          繁體中文 · 简体中文 · 日本語のテキスト · 한국어 텍스트 · 「引號」〈書名〉 ★ 🎉
+        </div>
+
+        <footer class="note">
+          Rendered client side. Nothing in this document was uploaded anywhere.
+        </footer>
+      </section>
+    </main>
+
+    <script type="module">
+      import { elementToPDF } from '../src/index.js';
+
+      const button = document.getElementById('export');
+      const status = document.getElementById('status');
+      const watermarkToggle = document.getElementById('watermark');
+      const landscapeToggle = document.getElementById('landscape');
+
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        status.textContent = 'Rendering…';
+
+        try {
+          const result = await elementToPDF(document.getElementById('report'), {
+            filename: 'cjk-pdf-example.pdf',
+            pageSize: 'a4',
+            orientation: landscapeToggle.checked ? 'landscape' : 'portrait',
+            margin: 10,
+            scale: 'print',
+            watermark: watermarkToggle.checked
+              ? { text: 'SAMPLE 範例', subtext: new Date().toISOString().slice(0, 10) }
+              : null,
+            onProgress: ({ phase, current, total }) => {
+              status.textContent = `${phase} ${current + 1}/${total}`;
+            },
+          });
+
+          status.textContent = `Saved ${result.filename} (${result.pageCount} page(s)).`;
+          if (result.imageFailures.length > 0) {
+            status.textContent += ` ${result.imageFailures.length} image(s) could not be inlined.`;
+          }
+        } catch (error) {
+          status.textContent = `Export failed: ${error.message}`;
+          console.error(error);
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
